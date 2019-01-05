@@ -165,14 +165,10 @@ if __name__=='__main__':
 
     song = readSongFromFile(args.file)
     tf  = Inflexion()
-    song = tf.change8du(song, args.C, direction=args.direction)
-    song_X = tf.inflex_song(song, args.X, args.C)
+    if args.direction is not None:
+        song_X = tf.change8du(song, args.C, direction=args.direction)
+    else:
+        song_X = tf.inflex_song(song, args.X, args.C)
+
     saveSongToFile(song_X, args.save)
     
-    # huimengyouxian = '6 [1] [2] [3] [3] [5] [3] [1] [2] 6 [1] [3] [2] [1] 6 5 \
-    #     6 [1] [2] [3] [5] [6] [5] [3] [1] [2] 6 [1] [3] [2] [1] 6'
-    # s = input()
-    # hongyan = '3 1 (6) (5) 5 6 [1] 6 6 5 3 1 2 5 3 2 2 2'
-    # tiankongzhicheng = '6 7 [1] 7 [1] [3] 7 3 3 6 5 6 [1] 5 '
-    # res = inflexion.inflex(C, D, tiankongzhicheng)
-
