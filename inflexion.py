@@ -2,7 +2,8 @@
 
 # 这个文件是用来转调的(inflexion)
 from collections import OrderedDict
-# from pprint import pprint
+from pprint import pprint
+import argparse
 
 class Inflexion():
     def __init__(self):
@@ -54,34 +55,56 @@ class Inflexion():
                 21:'(7)', 22:'#1', 23:'#2', 24:'3', 25:'#4', 26:'#5', 27:'#6', 
                 31:'7', 32:'[#1]', 33:'[#2]', 34:'[3]', 35:'[#4]', 36:'[#5]', 37:'[#6]' }
 
-        # self.G2C = OrderedDict([
-        #     ('((5))', '(1)'), ('((6))', '(2)'), ('((7))', '(3)'), ('(1)', '(4)'), ('(2)', '(5)'), ('(3)', '(6)'), ('(#4)', '(7)'),
-        #     ('(5)', '1'), ('(6)', '2'), ('(7)', '3'), ('1', '4'), ('2', '5'), ('3', '6'), ('#4', '7'),
-        #     ('5', '[1]'), ('6', '[2]'), ('7', '[3]'), ('[1]', '[4]'), ('[2]', '[5]'), ('[3]', '[6]'), ('[#4]', '[7]')])
-
-
-    def up8du(self):
-        pass
-
-    def down8du(self):
-        pass
-
-    def C2X(self, C, X= 'X'):
+    def change8du(self, song, X, direction=None):
         """
+        change one octave(8 du). 
+
         Args:
-            C(str): 调性. 'C', 'C_', 'D', 'D_'
-            X(str): 调性. 'C', 'C_', 'D', 'D_'
+            song(list): a list of string in which the string can be splited by space
+            X(str): the tonality of the song.
+            direction(str): reduce by one octave (8 du) if direction == 'down', 
+                            Increase by one octave (8 du) if direction == 'up'
         """
-        C2X = OrderedDict()
-        C = getattr(self, C)
-        X = getattr(self, X)
-        C_ = OrderedDict(sorted(C.items()))
-        X_ = OrderedDict(sorted(X.items()))
-        for c, x in zip(C_.items(), X_.items()):
-            C2X[c[1]] = x[1]
-        return C2X
+        if direction is None:
+            return song
 
-    def _inflex(self, string, C2X):
+        if direction != 'up' and direction != 'down':
+            print('direction is not right, please check this parameter')
+            exit(1)
+
+        X = getattr(self, X)
+        X_ = {v:k for k, v in X.items()}
+        song_ = []
+        for string in song:
+            string = string.split()
+            if direction == 'down':
+                line = [X[X_[ch]-10] for ch in string]
+            elif direction == 'up':
+                line = [X[X_[ch]+10] for ch in string]
+
+            song_.append(' '.join(line))
+
+        return song_
+
+    def X2C(self, X, C= 'C'):
+        """
+        Create an OrderedDict within which the key is C while the value is X 
+        so that we can turn the tonality(调性) of X to C.
+
+        Args:
+            X(str): 调性. 'C', 'C_', 'D', 'D_'
+            C(str): 调性. 'C', 'C_', 'D', 'D_'
+        """
+        X2C = OrderedDict()
+        X = getattr(self, X)
+        C = getattr(self, C)
+        X_ = OrderedDict(sorted(X.items()))
+        C_ = OrderedDict(sorted(C.items()))
+        for x, c in zip(X_.items(), C_.items()):
+            X2C[c[1]] = x[1] 
+        return X2C
+
+    def _inflex(self, string, X2C):
         """
         Args:
             string(str): the string that you want to inflex. e.g: '1 2 (2) [2]'
@@ -90,55 +113,66 @@ class Inflexion():
         # print (string)
         res = []
         for ch in string:
-            res.append(C2X[ch])
+            res.append(X2C[ch])
         return ' '.join(res)
         
-    def inflex_song(self, song, C, X):
+    def inflex_song(self, song, X, C):
         """
-        inflex a song from C to X 
+        Inflex a song from the tonality of X to tonality of C.
 
         Args:
             song(list): a list of string in which the string can be splited by space
             for example: ['1 2 3 4', '(1) 2 [2] 4']
         """
-        C2X = self.C2X(C, X)
+        X2C = self.X2C(X, C)
         song_X = []
         for line in song:
             if line == '':
                 song_X.append('')
             else:
-                res = self._inflex(line, C2X)
+                res = self._inflex(line, X2C)
                 song_X.append(res)
         return song_X
 
-def getSongFromFile(file):
+def readSongFromFile(file):
     song = []
     with open(file, 'r') as f:
-        X, C = f.readline().split() # 把X调转成C调，这样我可以演奏
+        # X, C = f.readline().split() # 把X调转成C调，这样我可以演奏
         for line in f:
             song.append(line.strip())
 
-    return song, C, X
+    return song
+
+def saveSongToFile(song, file):
+    with open(file, 'w') as f:
+        for item in song:
+            f.write(item+'\n')
+
 
 if __name__=='__main__':
-    file = './tiankongzhicheng.txt'
-    song, C, X = getSongFromFile(file)
-    # print(song)
-    # print(C)
-    # print(X)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--file', default=None, type=str,
+                           help='the path of the file of the song in tonality of X (default: None)')
+    parser.add_argument('-s', '--save', default=None, type=str,
+                           help='the path to save the song in tonality of C (default: None)')
+    parser.add_argument('-x', '--X', default=None, type=str,
+                           help='the tonality of the song before inflextion (default: None)')
+    parser.add_argument('-c', '--C', default='C', type=str,
+                           help='the tonality of the song after inflextion (default: C)')
+    parser.add_argument('-d', '--direction', default=None, type=str,
+                           help='to change one octave(8 du), the value of direction should be either up or down  (default: None)')
+    args = parser.parse_args()
+
+    song = readSongFromFile(args.file)
     tf  = Inflexion()
-    song_X = tf.inflex_song(song, C, X)
-    print (song_X)
+    song = tf.change8du(song, args.C, direction=args.direction)
+    song_X = tf.inflex_song(song, args.X, args.C)
+    saveSongToFile(song_X, args.save)
     
-    # C = 'C'
-    # D = 'D'
-    # G = 'G'
-    # print(inflexion.X2C('G', 'C'))
     # huimengyouxian = '6 [1] [2] [3] [3] [5] [3] [1] [2] 6 [1] [3] [2] [1] 6 5 \
     #     6 [1] [2] [3] [5] [6] [5] [3] [1] [2] 6 [1] [3] [2] [1] 6'
     # s = input()
     # hongyan = '3 1 (6) (5) 5 6 [1] 6 6 5 3 1 2 5 3 2 2 2'
     # tiankongzhicheng = '6 7 [1] 7 [1] [3] 7 3 3 6 5 6 [1] 5 '
     # res = inflexion.inflex(C, D, tiankongzhicheng)
-    # print(res)
 
